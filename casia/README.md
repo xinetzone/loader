@@ -91,7 +91,7 @@ class MPF:
         self.ndims = struct.unpack('l', self._fp.read(4))[0]
 
     def __iter__(self):
-        m = self.code_length + self.ndims 
+        m = self.code_length + self.ndims
         for i in range(0, m * self.nrows, m):
             # 样本的标签
             label = self._fp.read(self.code_length).decode('gb2312-80')
@@ -130,7 +130,7 @@ df.head()  # 查看前 5 个字
 
 输出结果：
 
-![](images/1.png)
+![1](images/1.png)
 
 由上图可以看出，每个字均有 $512$ 个特征，而这些特征的具体信息，可见：
 
@@ -311,7 +311,7 @@ h.root
 ```js
 / (RootGroup) "Xinet's dataset"
   children := ['HWDB10trn' (Group), 'HWDB10tst' (Group),
-  'HWDB11trn' (Group), 'HWDB11tst' (Group), 'OLHWDB10trn' (Group), 
+  'HWDB11trn' (Group), 'HWDB11tst' (Group), 'OLHWDB10trn' (Group),
   'OLHWDB10tst' (Group), 'OLHWDB11trn' (Group), 'OLHWDB11tst' (Group)]
 ```
 
@@ -437,7 +437,7 @@ h.root
 ```js
 / (RootGroup) "Xinet's dataset"
   children := ['HWDB10trn' (Group), 'HWDB10tst' (Group),
-   'HWDB11trn' (Group), 'HWDB11tst' (Group), 'OLHWDB10trn' (Group), 
+   'HWDB11trn' (Group), 'HWDB11tst' (Group), 'OLHWDB10trn' (Group),
    'OLHWDB10tst' (Group), 'OLHWDB11trn' (Group), 'OLHWDB11tst' (Group)]
 ```
 
@@ -450,7 +450,7 @@ j.keys()
 输出结果为：
 
 ```js
-dict_keys(['HWDB10trn', 'HWDB10tst', 'HWDB11trn', 'HWDB11tst', 
+dict_keys(['HWDB10trn', 'HWDB10tst', 'HWDB11trn', 'HWDB11tst',
 'OLHWDB10trn', 'OLHWDB10tst', 'OLHWDB11trn', 'OLHWDB11tst'])
 ```
 
@@ -472,7 +472,7 @@ j.HWDB10trn.writer007.features.head() # 前5特征
 
 输出：
 
-![](images/2.png)
+![2](images/2.png)
 
 但是，HDF5 将特征与标签分开：
 
@@ -506,5 +506,155 @@ b[:5]
 ['邑', '屹', '亿', '役', '臆']
 ```
 
+JSON 与 HDF5 各有各的特色，具体使用那一个可以自行选择。手写单字的手工特征已经解读完成，接下来的内容将着眼于其图片的解读。
+
 ## 1.4 手写单字的图片解读
 
+手写单字的离线与在线的图片是分别以 `.gnt` 与 `.pot` 格式进行编码的。下面先看看离线的手写单字长什么样？
+
+### 1.4.1 离线手写单字的图片解析
+
+首先要获取离线手写单字的图片文件：
+
+```py
+image_s = [f'{root}/{name}' for name in os.listdir(root) if 'gnt' in name] # 图片的源文件
+image_s
+```
+
+输出结果：
+
+```js
+['E:/OCR/CASIA/data/HWDB1.0trn_gnt.zip',
+ 'E:/OCR/CASIA/data/HWDB1.0tst_gnt.zip',
+ 'E:/OCR/CASIA/data/HWDB1.1trn_gnt.zip',
+ 'E:/OCR/CASIA/data/HWDB1.1tst_gnt.zip']
+```
+
+先定义一个 gnt 解码器：
+
+```py
+class GNT:
+    # GNT 文件的解码器
+    def __init__(self, Z, set_name):
+        self.Z = Z
+        self.set_name = set_name # 数据集名称
+    def __iter__(self):
+        with self.Z.open(self.set_name) as fp:
+            head = True
+            while head:
+                head = fp.read(4)
+                if not head: # 判断文件是否读到结尾
+                    break # 读到文件结尾立即结束
+                head = struct.unpack('I', head)[0]
+                tag_code = fp.read(2).decode('gb2312-80')
+                width, height = struct.unpack('2H', fp.read(4))
+                bitmap = np.frombuffer(fp.read(width*height), np.uint8)
+                img = bitmap.reshape((height, width))
+                yield img, tag_code
+```
+
+选择 `HWDB1.0trn_gnt.zip` 数据子集作为示范来说明 `GNT` 的使用：
+
+```python
+Z = zipfile.ZipFile(f'{root}/HWDB1.0trn_gnt.zip')
+Z.namelist()
+```
+
+输出结果：
+
+```py
+['1.0train-gb1.gnt']
+```
+
+由输出结果知道 `HWDB1.0trn_gnt.zip` 仅仅封装了一个数据 `'1.0train-gb1.gnt'`，下面直接传入 `GNT` 类：
+
+```py
+set_name = '1.0train-gb1.gnt'
+gnt = GNT(Z, set_name)
+for imgs, labels in gnt: # 仅仅查看一个字
+    break
+```
+
+为了更加直观，引入可视化包：
+
+```py
+%matplotlib inline
+from matplotlib import pyplot as plt
+```
+
+这样便可以查看图片了：
+
+```py
+plt.imshow(imgs)
+plt.title(labels)
+plt.show()
+```
+
+输出结果：
+
+![3](images/3.png)
+
+可以看出，此时报错了，说缺少字体。实际上，这是 matplotlib 的默认设置不支持汉字，为了让其支持汉字，需要如下操作：
+
+```py
+plt.rcParams['font.sans-serif'] = ['SimHei']  # 用来正常显示中文标签
+plt.rcParams['axes.unicode_minus'] = False  # 用来正常显示负号
+```
+
+接下来便可以正常显示了：
+
+```
+plt.imshow(imgs)
+plt.title(labels);
+```
+
+显示截图：
+
+![4](images/4.png)
+
+可以查看 `'1.0train-gb1.gnt'` 总有多少字符？
+
+```py
+labels = np.asanyarray([l for _, l in gnt])
+labels.shape[0]
+```
+
+输出：
+
+```js
+1246991
+```
+
+故而，`'1.0train-gb1.gnt'` 总有 $1246991$ 个字符，与官网提供的信息一致。
+
+### 1.4.2 在线手写单字的图片解析
+
+同样，需要获取在线手写单字的图片文件：
+
+```py
+image_s1 = [f'{root}/{name}' for name in os.listdir(root) if 'pot' in name] # POT 图片的源文件
+image_s1
+```
+
+输出结果为：
+
+```js
+['E:/OCR/CASIA/data/OLHWDB1.0test_pot.zip',
+ 'E:/OCR/CASIA/data/OLHWDB1.0train_pot.zip',
+ 'E:/OCR/CASIA/data/OLHWDB1.1trn_pot.zip',
+ 'E:/OCR/CASIA/data/OLHWDB1.1tst_pot.zip']
+```
+
+与 GNT 一样，先写一个 POT 的解码器：
+
+```py
+```
+
+以 `OLHWDB1.1trn_pot.zip` 为例来说明如何使用 `POT` 类：
+
+```py
+Z = zipfile.ZipFile(f'{root}/OLHWDB1.1trn_pot.zip')
+set_name = '1232-c.pot'
+```
+
+选择 `'1232-c.pot'` 文件作为解析的数据集。
