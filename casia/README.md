@@ -603,7 +603,7 @@ plt.rcParams['axes.unicode_minus'] = False  # 用来正常显示负号
 
 接下来便可以正常显示了：
 
-```
+```py
 plt.imshow(imgs)
 plt.title(labels);
 ```
@@ -648,13 +648,60 @@ image_s1
 与 GNT 一样，先写一个 POT 的解码器：
 
 ```py
+class POT:
+    # POT 解码器
+    def __init__(self, Z, set_name):
+        self.Z = Z
+        self._fp = Z.open(set_name)
+
+    def __iter__(self):
+        size = struct.unpack('H', self._fp.read(2))[0]  # Sample size
+        tag = {} # 记录字符与笔画
+        sizes = []
+        tag_id = 0
+        while size:
+            sizes.append(size)
+            tag_code = self._fp.read(4).decode(
+                'gb18030').strip('\x00') # 字符解码
+            stroke_num = struct.unpack('H', self._fp.read(2))[0] # 笔画数
+            strokes = {k: [] for k in range(stroke_num)}
+            k = 0
+            while k <= stroke_num:
+                xy = struct.unpack('2h', self._fp.read(4))
+                if xy == (-1, 0):
+                    k += 1
+                elif xy == (-1, -1):
+                    tag.update({tag_id:{tag_code: strokes}}) # 更新字典
+                    tag_id += 1
+                    size = self._fp.read(2)
+                    if size == b'':  # 判断是否解码完成
+                        print('解码结束！')
+                    else:
+                        size = struct.unpack('H', size)[0]  # Sample size
+                    break
+                else:
+                    strokes[k].append(xy) # 记录笔迹坐标
+            yield tag, sizes
 ```
 
 以 `OLHWDB1.1trn_pot.zip` 为例来说明如何使用 `POT` 类：
 
 ```py
 Z = zipfile.ZipFile(f'{root}/OLHWDB1.1trn_pot.zip')
-set_name = '1232-c.pot'
+ss = 0  # 统计该数据集总共的样本数目
+Z = zipfile.ZipFile('E:/OCR/CASIA/data/OLHWDB1.1trn_pot.zip')
+for set_name in Z.namelist():
+    pot = POT(Z, set_name) # 实例化
+    for tags, _ in pot:
+        ...  # 等价于 pass
+    ss += len(tags.keys())
+print(ss == 898573)
 ```
 
-选择 `'1232-c.pot'` 文件作为解析的数据集。
+输出结果为：
+
+```js
+True
+```
+
+即输出的结果符合官方提供的统计。更多的细节这里就不展开了，后面用到时再详细讲解。
