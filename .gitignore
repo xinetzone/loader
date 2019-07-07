@@ -106,3 +106,8 @@ venv.bak/
 # vscode & vs
 .vs
 .vscode
+
+# office & pdf
+*.doc
+*.docx
+*.pdf
