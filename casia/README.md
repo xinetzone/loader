@@ -11,7 +11,7 @@
 
 > 本数据库经签约授权后可免费用于学术研究目的，但用于商业目的需付费。学术研究的用途包括手写 文档分割、字符识别、字符串识别、文档检索、书写人适应、书写人鉴别等。
 
-如果需要使用该数据集需要提交申请书：
+如果需要使用完整的数据集需要提交申请书：
 
 - [CASIA-HWDB](http://www.nlpr.ia.ac.cn/databases/download/CASIA-HWDB-Chinese.pdf): <http://www.nlpr.ia.ac.cn/databases/download/CASIA-HWDB-Chinese.pdf>
 - [CASIA-OLHWDB](http://www.nlpr.ia.ac.cn/databases/download/CASIA-OLHWDB-Chinese.pdf): <http://www.nlpr.ia.ac.cn/databases/download/CASIA-OLHWDB-Chinese.pdf>
