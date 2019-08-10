@@ -111,3 +111,8 @@ venv.bak/
 *.doc
 *.docx
 *.pdf
+
+# data
+data/
+draft/
+Untitled.*
