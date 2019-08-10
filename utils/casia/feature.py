@@ -10,7 +10,7 @@ import pandas as pd
 import zipfile
 import tables as tb
 
-from dataset import Bunch, bunch2json, Bunch
+from ..dataset import Bunch, bunch2json, Bunch
 
 
 class MPF:
