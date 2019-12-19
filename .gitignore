@@ -102,3 +102,17 @@ venv.bak/
 
 # mypy
 .mypy_cache/
+
+# vscode & vs
+.vs
+.vscode
+
+# office & pdf
+*.doc
+*.docx
+*.pdf
+
+# data
+data/
+draft/
+Untitled.*
