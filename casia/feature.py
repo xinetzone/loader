@@ -1,9 +1,13 @@
 """
+作者：xinetzone
+时间：2019/12/20
+
 CASIA Online and Offline Chinese Handwriting Databases: 
 http://www.nlpr.ia.ac.cn/databases/handwriting/Home.html
 """
 
 import struct
+from pathlib import Path
 import numpy as np
 from pandas import DataFrame
 from zipfile import ZipFile
@@ -86,21 +90,46 @@ def zipfile2bunch(zip_name):
         return mb
 
 
-def bunch2hdf(bunch, save_path):
-    '''将 bunch 转换为 HDF5'''
-    filters = tb.Filters(complevel=7, shuffle=False)  # 过滤信息，用于压缩文件
-    h = tb.open_file(save_path, 'w', filters=filters, title='Xinet\'s dataset')
-    for name in bunch:  # 生成数据集"头"
-        _name = name.replace('/', '__')
-        _name = _name.replace('.', '_')
-        h.create_group('/', name=_name, filters=filters)
-        h.create_array(f"/{_name}", 'text',
-                       bunch[name]['text'].encode())
-        features = bunch[name]['dataset']
-        h.create_array(f"/{_name}", 'labels',
-                       " ".join([l for l in features.index]).encode())
-        h.create_array(f"/{_name}", 'features', features.values)
-    h.close()  # 防止资源泄露
+class CASIA:
+    def __init__(self, root):
+        self.root = Path(root)
+
+    def names2bunch(self, names):
+        '''合并给定的 names 的 bunch'''
+        bunch = {}
+        for mpf_name in names:
+            bunch.update(zipfile2bunch(mpf_name))
+        return bunch
+
+    def split(self, root):
+        '''划分 casia 的 bunch 为训练集与测试集'''
+        train_names = set(root.glob('*trn.zip'))  # 训练集名称列表
+        test_names = set(root.glob('*tst.zip'))  # 测试集名称列表
+        # names 转换为 bunch
+        train_bunch = self.names2bunch(train_names)
+        test_bunch = self.names2bunch(test_names)
+        bunch = {'train': train_bunch, 'test': test_bunch}
+        return bunch
+
+    def bunch2hdf(self, save_path):
+        '''将 bunch 转换为 HDF5'''
+        bunch = self.split(self.root)
+        filters = tb.Filters(complevel=7, shuffle=False)  # 过滤信息，用于压缩文件
+        with tb.open_file(save_path, 'w', filters=filters, title='Xinet\'s casia dataset') as h:
+            for group_name, features in bunch.items():
+                h.create_group('/', group_name)
+                for name in features:  # 生成数据集"头"
+                    _name = name.replace('/', '__')
+                    _name = _name.replace('.', '_')
+                    h.create_group(f'/{group_name}',
+                                   name=_name, filters=filters)
+                    h.create_array(f"/{group_name}/{_name}", 'text',
+                                   bunch[group_name][name]['text'].encode())
+                    features = bunch[group_name][name]['dataset']
+                    h.create_array(f"/{group_name}/{_name}", 'labels',
+                                   " ".join([l for l in features.index]).encode())
+                    h.create_array(f"/{group_name}/{_name}",
+                                   'features', features.values)
 
 
 class CASIAFeature:
@@ -117,7 +146,12 @@ class CASIAFeature:
         labels_str = mpf.labels.read().decode()
         return np.array(labels_str.split(' '))
 
-    def __iter__(self):
-        '''返回 (features, labels)'''
-        for mpf in self.h5.iter_nodes('/'):
+    def train_iter(self):
+        '''返回 训练集的 (features, labels)'''
+        for mpf in self.h5.iter_nodes('/train'):
+            yield self._features(mpf), self._labels(mpf)
+
+    def test_iter(self):
+        '''返回 测试集的 (features, labels)'''
+        for mpf in self.h5.iter_nodes('/test'):
             yield self._features(mpf), self._labels(mpf)
