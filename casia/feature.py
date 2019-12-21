@@ -155,3 +155,31 @@ class CASIAFeature:
         '''返回 测试集的 (features, labels)'''
         for mpf in self.h5.iter_nodes('/test'):
             yield self._features(mpf), self._labels(mpf)
+
+
+class SubCASIA(CASIAFeature):
+    def __init__(self, class_names, hdf_path):
+        '''casia 子集数据 MPF 特征处理工具
+        通过给定的 class_names 获取 CASIA 的子集数据
+        '''
+        self.h5 = tb.open_file(hdf_path)
+        self.class_names = class_names
+
+    def get_iter(self, super_iter):
+        '''从 super_iter 获取包含 self.class_names 的迭代器'''
+        for features, labels in super_iter:
+            # 选择指定 class_names 的样本
+            frame = DataFrame(features, labels)
+            # 选择 frame.index 与 self.class_names 的交集
+            frame = frame.loc[frame.index & self.class_names]
+            features = frame.values
+            labels = frame.index.values
+            yield features, labels
+
+    def sub_train_iter(self):
+        '''从 self.train_iter() 获取包含 self.class_names 的迭代器'''
+        return self.get_iter(self.train_iter())
+
+    def sub_test_iter(self):
+        '''从 self.test_iter() 获取包含 self.class_names 的迭代器'''
+        return self.get_iter(self.test_iter())
