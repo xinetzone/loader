@@ -8,13 +8,13 @@ class Bunch(dict):
 
 
 def bunch2json(bunch, path):
-    # bunch 序列化为 JSON
+    '''bunch 序列化为 JSON'''
     with open(path, 'wb') as fp:
         pickle.dump(bunch, fp)
 
 
 def json2bunch(path):
-    # JSON 反序列化为 bunch
+    '''JSON 反序列化为 bunch'''
     with open(path, 'rb') as fp:
         X = pickle.load(fp)
     return X
