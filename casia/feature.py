@@ -59,13 +59,11 @@ class MPFDecoder:
 
     def _get_feature(self, mpf):
         '''获取样本的特征向量'''
-        feature = np.frombuffer(mpf.read(self.ndims), self.dtype)
-        return feature
+        return np.frombuffer(mpf.read(self.ndims), self.dtype)
 
     def _get_label(self, mpf):
         '''获取样本的标签'''
-        label = mpf.read(self.code_length).decode('gb18030')
-        return label
+        return mpf.read(self.code_length).decode('gb18030')
 
     def _decode(self, mpf):
         '''解码 MPF 数据'''
@@ -108,8 +106,7 @@ class CASIA:
         # names 转换为 bunch
         train_bunch = self.names2bunch(train_names)
         test_bunch = self.names2bunch(test_names)
-        bunch = {'train': train_bunch, 'test': test_bunch}
-        return bunch
+        return {'train': train_bunch, 'test': test_bunch}
 
     def bunch2hdf(self, save_path):
         '''将 bunch 转换为 HDF5'''
@@ -126,8 +123,12 @@ class CASIA:
                     h.create_array(f"/{group_name}/{_name}", 'text',
                                    bunch[group_name][name]['text'].encode())
                     features = bunch[group_name][name]['dataset']
-                    h.create_array(f"/{group_name}/{_name}", 'labels',
-                                   " ".join([l for l in features.index]).encode())
+                    h.create_array(
+                        f"/{group_name}/{_name}",
+                        'labels',
+                        " ".join(list(features.index)).encode(),
+                    )
+
                     h.create_array(f"/{group_name}/{_name}",
                                    'features', features.values)
 
