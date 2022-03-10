@@ -50,7 +50,7 @@ class POT:
                 if xy == (-1, 0):
                     k += 1
                 elif xy == (-1, -1):
-                    tag.update({tag_id: {tag_code: strokes}})  # 更新字典
+                    tag[tag_id] = {tag_code: strokes}
                     tag_id += 1
                     size = self._fp.read(2)
                     if size == b'':  # 判断是否解码完成
